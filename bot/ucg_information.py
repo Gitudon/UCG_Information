@@ -10,10 +10,10 @@ import aiomysql
 TOKEN = os.getenv("TOKEN")
 intent = discord.Intents.default()
 intent.message_content = True
-client = commands.Bot(command_prefix="*", intents=intent)
-channel_id = int(os.environ.get("CHANNEL_ID"))
+client = commands.Bot(command_prefix="-", intents=intent)
+official_info_channel_id = int(os.environ.get("OFFICIAL_INFO_CHANNEL_ID"))
 user_name = os.getenv("TWITTER_USER_NAME")
-target_url = "https://marvel.disney.co.jp/news"
+target_url = "https://ultraman-cardgame.com/page/jp/news/news-list"
 task = None
 
 
