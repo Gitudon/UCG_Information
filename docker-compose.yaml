@@ -1,0 +1,12 @@
+version: '3.8'
+services:
+  bot:
+    build: .
+    volumes:
+      - ./bot:/usr/src/app:rw
+    env_file:
+      - .env
+    environment:
+      - TZ=Asia/Tokyo
+    command: ["python3", "main.py"]
+    tty: true

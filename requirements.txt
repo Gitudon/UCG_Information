@@ -1,0 +1,5 @@
+py-cord
+discord.py
+beautifulsoup4
+aiohttp
+aiomysql
