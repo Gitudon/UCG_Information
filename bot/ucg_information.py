@@ -12,7 +12,10 @@ intent = discord.Intents.default()
 intent.message_content = True
 client = commands.Bot(command_prefix="-", intents=intent)
 official_info_channel_id = int(os.environ.get("OFFICIAL_INFO_CHANNEL_ID"))
-user_name = os.getenv("TWITTER_USER_NAME")
+ranking_channel_id = int(os.environ.get("RANKING_CHANNEL_ID"))
+new_card_channel_id = int(os.environ.get("NEW_CARD_CHANNEL_ID"))
+official_info_user_id = os.getenv("OFFICIAL_INFO_USER_ID")
+ranking_user_id = os.getenv("RANKING_USER_ID")
 target_url = "https://ultraman-cardgame.com/page/jp/news/news-list"
 task = None
 
@@ -198,13 +201,17 @@ async def main():
 
 
 def is_correct_channel(ctx) -> bool:
-    return ctx.channel.id == channel_id
+    return ctx.channel.id in [
+        official_info_channel_id,
+        ranking_channel_id,
+        new_card_channel_id,
+    ]
 
 
 @client.event
 async def test(ctx):
     if is_correct_channel(ctx):
-        await ctx.channel.send("Twitter Bot is Working!")
+        await ctx.channel.send("UCG Information Bot is Working!")
 
 
 @client.event
