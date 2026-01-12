@@ -12,10 +12,10 @@ intent = discord.Intents.default()
 intent.message_content = True
 client = commands.Bot(command_prefix="-", intents=intent)
 official_info_channel_id = int(os.environ.get("OFFICIAL_INFO_CHANNEL_ID"))
-ranking_channel_id = int(os.environ.get("RANKING_CHANNEL_ID"))
+environment_channel_id = int(os.environ.get("ENVIRONMENT_CHANNEL_ID"))
 new_card_channel_id = int(os.environ.get("NEW_CARD_CHANNEL_ID"))
 official_info_user_id = os.getenv("OFFICIAL_INFO_USER_ID")
-ranking_user_id = os.getenv("RANKING_USER_ID")
+environment_user_id = os.getenv("ENVIRONMENT_USER_ID")
 target_url = "https://ultraman-cardgame.com/page/jp/news/news-list"
 task = None
 
@@ -153,7 +153,7 @@ class Crawler:
             return "ERROR"
 
 
-async def main():
+async def send_environment_info():
     get_tweet_number = 5
     while True:
         try:
@@ -169,17 +169,15 @@ async def main():
                 )
                 tweet_text = tweet["text"]
                 tweet_id = tweet["id"]
-                tweet_url = f"https://x.com/{user_name}/status/{tweet_id}"
+                tweet_url = f"https://x.com/{environment_user_id}/status/{tweet_id}"
                 is_retweet = tweet_text.startswith("RT @")
                 existing = await UseMySQL.run_sql(
                     "SELECT id FROM tweets WHERE tweet_id = %s", (tweet_id,)
                 )
                 if existing:
                     continue
-                channel = client.get_channel(channel_id)
-                await channel.send(
-                    f"新しい投稿です！拡散よろしくお願いします！\n{tweet_url}"
-                )
+                channel = client.get_channel(environment_channel_id)
+                await channel.send(f"{tweet_url}")
                 await UseMySQL.run_sql(
                     "INSERT INTO tweets (text, tweet_id, url, is_retweet) VALUES (%s, %s, %s, %s)",
                     (tweet_text, tweet_id, tweet_url, is_retweet),
@@ -197,15 +195,38 @@ async def main():
         except Exception as e:
             print(f"Error: {e}")
             traceback.print_exc()
+        # 一週間に一度
         await asyncio.sleep(1000)
+
+
+async def send_official_channel_info():
+    pass
+    # 一日一度(12:05)
+    await asyncio.sleep(1000)
+
+
+async def send_new_article():
+    while True:
+        try:
+            new_articles = await Crawler.get_new_articles()
+            if new_articles != "ERROR":
+                await send_new_article(new_articles)
+        except Exception as e:
+            print(f"Error: {e}")
+            traceback.print_exc()
+        await asyncio.sleep(60)
 
 
 def is_correct_channel(ctx) -> bool:
     return ctx.channel.id in [
         official_info_channel_id,
-        ranking_channel_id,
+        environment_channel_id,
         new_card_channel_id,
     ]
+
+
+async def main():
+    pass
 
 
 @client.event
