@@ -4,6 +4,7 @@ services:
     build: .
     volumes:
       - ./bot:/usr/src/app:rw
+    restart: unless-stopped
     env_file:
       - .env
     environment:
