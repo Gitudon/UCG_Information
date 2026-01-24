@@ -153,68 +153,71 @@ class Crawler:
             return "ERROR"
 
 
-async def send_environment_info():
-    get_tweet_number = 5
-    while True:
-        try:
-            latest_tweets = reversed(
-                await Crawler.fetch_latest_tweets(get_tweet_number)
-            )
-            if not latest_tweets:
-                return
-            for tweet in latest_tweets:
-                # 仮のpublic_metricsを使用
-                public_metrics = tweet.get(
-                    "public_metrics", Crawler.make_dummy_public_metrics()
+class Sender:
+    @staticmethod
+    async def send_environment_info():
+        get_tweet_number = 5
+        while True:
+            try:
+                latest_tweets = reversed(
+                    await Crawler.fetch_latest_tweets(get_tweet_number)
                 )
-                tweet_text = tweet["text"]
-                tweet_id = tweet["id"]
-                tweet_url = f"https://x.com/{environment_user_id}/status/{tweet_id}"
-                is_retweet = tweet_text.startswith("RT @")
-                existing = await UseMySQL.run_sql(
-                    "SELECT id FROM tweets WHERE tweet_id = %s", (tweet_id,)
-                )
-                if existing:
-                    continue
-                channel = client.get_channel(environment_channel_id)
-                await channel.send(f"{tweet_url}")
-                await UseMySQL.run_sql(
-                    "INSERT INTO tweets (text, tweet_id, url, is_retweet) VALUES (%s, %s, %s, %s)",
-                    (tweet_text, tweet_id, tweet_url, is_retweet),
-                )
-                await UseMySQL.run_sql(
-                    "INSERT INTO public_metrics (tweet_id, retweet_count, reply_count, like_count, quote_count) VALUES (%s, %s, %s, %s, %s)",
-                    (
-                        tweet_id,
-                        public_metrics["retweet_count"],
-                        public_metrics["reply_count"],
-                        public_metrics["like_count"],
-                        public_metrics["quote_count"],
-                    ),
-                )
-        except Exception as e:
-            print(f"Error: {e}")
-            traceback.print_exc()
-        # 一週間に一度
+                if not latest_tweets:
+                    return
+                for tweet in latest_tweets:
+                    # 仮のpublic_metricsを使用
+                    public_metrics = tweet.get(
+                        "public_metrics", Crawler.make_dummy_public_metrics()
+                    )
+                    tweet_text = tweet["text"]
+                    tweet_id = tweet["id"]
+                    tweet_url = f"https://x.com/{environment_user_id}/status/{tweet_id}"
+                    is_retweet = tweet_text.startswith("RT @")
+                    existing = await UseMySQL.run_sql(
+                        "SELECT id FROM tweets WHERE tweet_id = %s", (tweet_id,)
+                    )
+                    if existing:
+                        continue
+                    channel = client.get_channel(environment_channel_id)
+                    await channel.send(f"{tweet_url}")
+                    await UseMySQL.run_sql(
+                        "INSERT INTO tweets (text, tweet_id, url, is_retweet) VALUES (%s, %s, %s, %s)",
+                        (tweet_text, tweet_id, tweet_url, is_retweet),
+                    )
+                    inserted_record_id = await UseMySQL.run_sql(
+                        "SELECT id FROM tweets WHERE tweet_id = %s", (tweet_id,)
+                    )[0]
+                    await UseMySQL.run_sql(
+                        "INSERT INTO public_metrics (tweet_id, retweet_count, reply_count, like_count, quote_count) VALUES (%s, %s, %s, %s, %s)",
+                        (
+                            inserted_record_id,
+                            public_metrics["retweet_count"],
+                            public_metrics["reply_count"],
+                            public_metrics["like_count"],
+                            public_metrics["quote_count"],
+                        ),
+                    )
+            except Exception as e:
+                print(f"Error: {e}")
+                traceback.print_exc()
+            # 一時間に一度くらい
+            await asyncio.sleep(1000)
+
+    async def send_official_channel_info():
+        pass
+        # 一日一度(12:05)
         await asyncio.sleep(1000)
 
-
-async def send_official_channel_info():
-    pass
-    # 一日一度(12:05)
-    await asyncio.sleep(1000)
-
-
-async def send_new_article():
-    while True:
-        try:
-            new_articles = await Crawler.get_new_articles()
-            if new_articles != "ERROR":
-                await send_new_article(new_articles)
-        except Exception as e:
-            print(f"Error: {e}")
-            traceback.print_exc()
-        await asyncio.sleep(60)
+    async def send_new_article():
+        while True:
+            try:
+                new_articles = await Crawler.get_new_articles()
+                if new_articles != "ERROR":
+                    pass
+            except Exception as e:
+                print(f"Error: {e}")
+                traceback.print_exc()
+            await asyncio.sleep(60)
 
 
 def is_correct_channel(ctx) -> bool:
