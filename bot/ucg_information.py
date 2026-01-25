@@ -7,16 +7,17 @@ import aiohttp
 from bs4 import BeautifulSoup
 import aiomysql
 
+SERVICE_NAME = "UCG_Information"
 TOKEN = os.getenv("TOKEN")
+OFFICIAL_INFO_CHANNEL_ID = int(os.environ.get("OFFICIAL_INFO_CHANNEL_ID"))
+ENVIRONMENT_CHANNEL_ID = int(os.environ.get("ENVIRONMENT_CHANNEL_ID"))
+NEW_CARD_CHANNEL_ID = int(os.environ.get("NEW_CARD_CHANNEL_ID"))
+OFFICIAL_INFO_USER_ID = os.getenv("OFFICIAL_INFO_USER_ID")
+ENVIRONMENT_USER_ID = os.getenv("ENVIRONMENT_USER_ID")
+TARGET_URL = "https://ultraman-cardgame.com/page/jp/news/news-list"
 intent = discord.Intents.default()
 intent.message_content = True
 client = commands.Bot(command_prefix="-", intents=intent)
-official_info_channel_id = int(os.environ.get("OFFICIAL_INFO_CHANNEL_ID"))
-environment_channel_id = int(os.environ.get("ENVIRONMENT_CHANNEL_ID"))
-new_card_channel_id = int(os.environ.get("NEW_CARD_CHANNEL_ID"))
-official_info_user_id = os.getenv("OFFICIAL_INFO_USER_ID")
-environment_user_id = os.getenv("ENVIRONMENT_USER_ID")
-target_url = "https://ultraman-cardgame.com/page/jp/news/news-list"
 task = None
 
 
@@ -128,7 +129,7 @@ class Crawler:
     @classmethod
     async def get_new_articles(cls) -> list | str:
         try:
-            soup = await cls.try_to_get_soup(target_url)
+            soup = await cls.try_to_get_soup(TARGET_URL)
             if soup == "FAILED":
                 return "ERROR"
             targets = soup.find_all("div", class_="text-content")
@@ -171,14 +172,14 @@ class Sender:
                     )
                     tweet_text = tweet["text"]
                     tweet_id = tweet["id"]
-                    tweet_url = f"https://x.com/{environment_user_id}/status/{tweet_id}"
+                    tweet_url = f"https://x.com/{ENVIRONMENT_USER_ID}/status/{tweet_id}"
                     is_retweet = tweet_text.startswith("RT @")
                     existing = await UseMySQL.run_sql(
                         "SELECT id FROM tweets WHERE tweet_id = %s", (tweet_id,)
                     )
                     if existing:
                         continue
-                    channel = client.get_channel(environment_channel_id)
+                    channel = client.get_channel(ENVIRONMENT_CHANNEL_ID)
                     await channel.send(f"{tweet_url}")
                     await UseMySQL.run_sql(
                         "INSERT INTO tweets (text, tweet_id, url, is_retweet) VALUES (%s, %s, %s, %s)",
@@ -222,9 +223,9 @@ class Sender:
 
 def is_correct_channel(ctx) -> bool:
     return ctx.channel.id in [
-        official_info_channel_id,
-        environment_channel_id,
-        new_card_channel_id,
+        OFFICIAL_INFO_CHANNEL_ID,
+        ENVIRONMENT_CHANNEL_ID,
+        NEW_CARD_CHANNEL_ID,
     ]
 
 
