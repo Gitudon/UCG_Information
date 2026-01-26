@@ -126,13 +126,20 @@ class Crawler:
                 return soup
         return "FAILED"
 
+    @staticmethod
+    async def register_crawl(target_url: str, method: str):
+        await UseMySQL.run_sql(
+            "INSERT INTO crawls (target_url, method, service) VALUES (%s, %s, %s)",
+            (target_url, method, SERVICE_NAME),
+        )
+
     @classmethod
     async def get_new_articles(cls) -> list | str:
         try:
             soup = await cls.try_to_get_soup(TARGET_URL)
             if soup == "FAILED":
                 return "ERROR"
-            targets = soup.find_all("div", class_="text-content")
+            targets = soup.find_all("div", class_="content")
             new_articles = []
             for target in targets:
                 new_articles.append(target.find("a").get("href"))
@@ -209,16 +216,27 @@ class Sender:
         # 一日一度(12:05)
         await asyncio.sleep(1000)
 
-    async def send_new_article():
-        while True:
-            try:
-                new_articles = await Crawler.get_new_articles()
-                if new_articles != "ERROR":
-                    pass
-            except Exception as e:
-                print(f"Error: {e}")
-                traceback.print_exc()
-            await asyncio.sleep(60)
+    async def send_new_article(new_articles: list):
+        channel = client.get_channel(OFFICIAL_INFO_CHANNEL_ID)
+        for article in new_articles:
+            sent = (
+                await UseMySQL.run_sql(
+                    "SELECT url FROM sent_urls WHERE service = %s AND url = %s",
+                    (SERVICE_NAME, article),
+                )
+                != []
+            )
+            if sent:
+                continue
+            await channel.send(article)
+            while True:
+                title = await Crawler.get_article_title(article)
+                if title != "ERROR":
+                    break
+            await UseMySQL.run_sql(
+                "INSERT INTO sent_urls (url, title, category, service) VALUES (%s,  %s, %s, %s)",
+                (article, title, "new_article", SERVICE_NAME),
+            )
 
 
 def is_correct_channel(ctx) -> bool:
@@ -230,7 +248,15 @@ def is_correct_channel(ctx) -> bool:
 
 
 async def main():
-    pass
+    while True:
+        try:
+            new_articles = await Crawler.get_new_articles()
+            if new_articles != "ERROR":
+                await Sender.send_new_article(new_articles)
+        except Exception as e:
+            print(f"Error: {e}")
+            traceback.print_exc()
+        await asyncio.sleep(60)
 
 
 @client.event
