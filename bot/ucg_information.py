@@ -262,7 +262,7 @@ async def main():
         await asyncio.sleep(60)
 
 
-@client.event
+@client.command()
 async def test(ctx):
     if is_correct_channel(ctx):
         await ctx.channel.send("UCG Information Bot is Working!")
