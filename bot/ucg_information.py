@@ -139,6 +139,7 @@ class Crawler:
             soup = await cls.try_to_get_soup(TARGET_URL)
             if soup == "FAILED":
                 return "ERROR"
+            await cls.register_crawl(TARGET_URL, "HTTP_GET")
             targets = soup.find_all("div", class_="content")
             new_articles = []
             for target in targets:
@@ -154,6 +155,7 @@ class Crawler:
             soup = await cls.try_to_get_soup(url)
             if soup == "FAILED":
                 return "ERROR"
+            await cls.register_crawl(TARGET_URL, "HTTP_GET")
             title = soup.find("title").text.strip()
             return title
         except Exception as e:
@@ -251,6 +253,7 @@ async def main():
     while True:
         try:
             new_articles = await Crawler.get_new_articles()
+            print(new_articles)
             if new_articles != "ERROR":
                 await Sender.send_new_article(new_articles)
         except Exception as e:
