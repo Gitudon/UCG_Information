@@ -136,6 +136,7 @@ class Crawler:
     @classmethod
     async def get_new_articles(cls) -> list | str:
         try:
+            # これだと取得できない。実際にブラウザを動かす必要がある。
             soup = await cls.try_to_get_soup(TARGET_URL)
             if soup == "FAILED":
                 return "ERROR"
