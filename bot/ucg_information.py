@@ -283,7 +283,7 @@ async def main():
     while True:
         try:
             # API系は15分に1回のみ実行
-            if await Crawler.check_latest_api_crawl_time:
+            if await Crawler.check_latest_api_crawl_time():
                 new_official_tweets = await Crawler.fetch_latest_tweets(
                     OFFICIAL_BEARER_TOKEN, OFFICIAL_USER_ID
                 )
