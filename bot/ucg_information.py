@@ -1,4 +1,4 @@
-import time
+import datetime
 import os
 import asyncio
 import traceback
@@ -145,8 +145,8 @@ class Crawler:
         # 初回クロールの場合はTrueを返す
         if not result:
             return True
-        latest_clawl_time = result[0]
-        current_time = int(time.time())
+        latest_clawl_time = result[0].timestamp()
+        current_time = datetime.datetime.now().timestamp()
         # 最後のAPIを用いたクロールから15分経過しているか返す
         return current_time - latest_clawl_time > 60 * 15
 
