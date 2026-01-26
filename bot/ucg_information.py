@@ -254,7 +254,6 @@ async def main():
     while True:
         try:
             new_articles = await Crawler.get_new_articles()
-            print(new_articles)
             if new_articles != "ERROR":
                 await Sender.send_new_article(new_articles)
         except Exception as e:
