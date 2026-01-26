@@ -139,7 +139,7 @@ class Crawler:
     @staticmethod
     async def check_latest_api_crawl_time() -> bool:
         result = await UseMySQL.run_sql(
-            "SELECT created_at FROM crawls WHERE method = %s AND service = %s ORDER BY crawled_at DESC LIMIT 1",
+            "SELECT created_at FROM crawls WHERE method = %s AND service = %s ORDER BY created_at DESC LIMIT 1",
             ("X_API", SERVICE_NAME),
         )
         # 初回クロールの場合はTrueを返す
