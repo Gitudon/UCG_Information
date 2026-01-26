@@ -7,13 +7,17 @@ import aiohttp
 from bs4 import BeautifulSoup
 import aiomysql
 
+SERVICE_NAME = "UCG_Information"
 TOKEN = os.getenv("TOKEN")
+OFFICIAL_INFO_CHANNEL_ID = int(os.environ.get("OFFICIAL_INFO_CHANNEL_ID"))
+ENVIRONMENT_CHANNEL_ID = int(os.environ.get("ENVIRONMENT_CHANNEL_ID"))
+NEW_CARD_CHANNEL_ID = int(os.environ.get("NEW_CARD_CHANNEL_ID"))
+OFFICIAL_INFO_USER_ID = os.getenv("OFFICIAL_INFO_USER_ID")
+ENVIRONMENT_USER_ID = os.getenv("ENVIRONMENT_USER_ID")
+TARGET_URL = "https://ultraman-cardgame.com/page/jp/news/news-list"
 intent = discord.Intents.default()
 intent.message_content = True
-client = commands.Bot(command_prefix="*", intents=intent)
-channel_id = int(os.environ.get("CHANNEL_ID"))
-user_name = os.getenv("TWITTER_USER_NAME")
-target_url = "https://marvel.disney.co.jp/news"
+client = commands.Bot(command_prefix="-", intents=intent)
 task = None
 
 
@@ -122,13 +126,20 @@ class Crawler:
                 return soup
         return "FAILED"
 
+    @staticmethod
+    async def register_crawl(target_url: str, method: str):
+        await UseMySQL.run_sql(
+            "INSERT INTO crawls (target_url, method, service) VALUES (%s, %s, %s)",
+            (target_url, method, SERVICE_NAME),
+        )
+
     @classmethod
     async def get_new_articles(cls) -> list | str:
         try:
-            soup = await cls.try_to_get_soup(target_url)
+            soup = await cls.try_to_get_soup(TARGET_URL)
             if soup == "FAILED":
                 return "ERROR"
-            targets = soup.find_all("div", class_="text-content")
+            targets = soup.find_all("div", class_="content")
             new_articles = []
             for target in targets:
                 new_articles.append(target.find("a").get("href"))
@@ -150,61 +161,108 @@ class Crawler:
             return "ERROR"
 
 
-async def main():
-    get_tweet_number = 5
-    while True:
-        try:
-            latest_tweets = reversed(
-                await Crawler.fetch_latest_tweets(get_tweet_number)
-            )
-            if not latest_tweets:
-                return
-            for tweet in latest_tweets:
-                # 仮のpublic_metricsを使用
-                public_metrics = tweet.get(
-                    "public_metrics", Crawler.make_dummy_public_metrics()
+class Sender:
+    @staticmethod
+    async def send_environment_info():
+        get_tweet_number = 5
+        while True:
+            try:
+                latest_tweets = reversed(
+                    await Crawler.fetch_latest_tweets(get_tweet_number)
                 )
-                tweet_text = tweet["text"]
-                tweet_id = tweet["id"]
-                tweet_url = f"https://x.com/{user_name}/status/{tweet_id}"
-                is_retweet = tweet_text.startswith("RT @")
-                existing = await UseMySQL.run_sql(
-                    "SELECT id FROM tweets WHERE tweet_id = %s", (tweet_id,)
-                )
-                if existing:
-                    continue
-                channel = client.get_channel(channel_id)
-                await channel.send(
-                    f"新しい投稿です！拡散よろしくお願いします！\n{tweet_url}"
-                )
-                await UseMySQL.run_sql(
-                    "INSERT INTO tweets (text, tweet_id, url, is_retweet) VALUES (%s, %s, %s, %s)",
-                    (tweet_text, tweet_id, tweet_url, is_retweet),
-                )
-                await UseMySQL.run_sql(
-                    "INSERT INTO public_metrics (tweet_id, retweet_count, reply_count, like_count, quote_count) VALUES (%s, %s, %s, %s, %s)",
-                    (
-                        tweet_id,
-                        public_metrics["retweet_count"],
-                        public_metrics["reply_count"],
-                        public_metrics["like_count"],
-                        public_metrics["quote_count"],
-                    ),
-                )
-        except Exception as e:
-            print(f"Error: {e}")
-            traceback.print_exc()
+                if not latest_tweets:
+                    return
+                for tweet in latest_tweets:
+                    # 仮のpublic_metricsを使用
+                    public_metrics = tweet.get(
+                        "public_metrics", Crawler.make_dummy_public_metrics()
+                    )
+                    tweet_text = tweet["text"]
+                    tweet_id = tweet["id"]
+                    tweet_url = f"https://x.com/{ENVIRONMENT_USER_ID}/status/{tweet_id}"
+                    is_retweet = tweet_text.startswith("RT @")
+                    existing = await UseMySQL.run_sql(
+                        "SELECT id FROM tweets WHERE tweet_id = %s", (tweet_id,)
+                    )
+                    if existing:
+                        continue
+                    channel = client.get_channel(ENVIRONMENT_CHANNEL_ID)
+                    await channel.send(f"{tweet_url}")
+                    await UseMySQL.run_sql(
+                        "INSERT INTO tweets (text, tweet_id, url, is_retweet) VALUES (%s, %s, %s, %s)",
+                        (tweet_text, tweet_id, tweet_url, is_retweet),
+                    )
+                    inserted_record_id = await UseMySQL.run_sql(
+                        "SELECT id FROM tweets WHERE tweet_id = %s", (tweet_id,)
+                    )[0]
+                    await UseMySQL.run_sql(
+                        "INSERT INTO public_metrics (tweet_id, retweet_count, reply_count, like_count, quote_count) VALUES (%s, %s, %s, %s, %s)",
+                        (
+                            inserted_record_id,
+                            public_metrics["retweet_count"],
+                            public_metrics["reply_count"],
+                            public_metrics["like_count"],
+                            public_metrics["quote_count"],
+                        ),
+                    )
+            except Exception as e:
+                print(f"Error: {e}")
+                traceback.print_exc()
+            # 一時間に一度くらい
+            await asyncio.sleep(1000)
+
+    async def send_official_channel_info():
+        pass
+        # 一日一度(12:05)
         await asyncio.sleep(1000)
+
+    async def send_new_article(new_articles: list):
+        channel = client.get_channel(OFFICIAL_INFO_CHANNEL_ID)
+        for article in new_articles:
+            sent = (
+                await UseMySQL.run_sql(
+                    "SELECT url FROM sent_urls WHERE service = %s AND url = %s",
+                    (SERVICE_NAME, article),
+                )
+                != []
+            )
+            if sent:
+                continue
+            await channel.send(article)
+            while True:
+                title = await Crawler.get_article_title(article)
+                if title != "ERROR":
+                    break
+            await UseMySQL.run_sql(
+                "INSERT INTO sent_urls (url, title, category, service) VALUES (%s,  %s, %s, %s)",
+                (article, title, "new_article", SERVICE_NAME),
+            )
 
 
 def is_correct_channel(ctx) -> bool:
-    return ctx.channel.id == channel_id
+    return ctx.channel.id in [
+        OFFICIAL_INFO_CHANNEL_ID,
+        ENVIRONMENT_CHANNEL_ID,
+        NEW_CARD_CHANNEL_ID,
+    ]
+
+
+async def main():
+    while True:
+        try:
+            new_articles = await Crawler.get_new_articles()
+            if new_articles != "ERROR":
+                await Sender.send_new_article(new_articles)
+        except Exception as e:
+            print(f"Error: {e}")
+            traceback.print_exc()
+        await asyncio.sleep(60)
 
 
 @client.event
 async def test(ctx):
     if is_correct_channel(ctx):
-        await ctx.channel.send("Twitter Bot is Working!")
+        await ctx.channel.send("UCG Information Bot is Working!")
 
 
 @client.event
