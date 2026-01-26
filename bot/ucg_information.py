@@ -284,12 +284,16 @@ async def main():
         try:
             # API系は15分に1回のみ実行
             if await Crawler.check_latest_api_crawl_time():
-                new_official_tweets = await Crawler.fetch_latest_tweets(
-                    OFFICIAL_BEARER_TOKEN, OFFICIAL_USER_ID
+                new_official_tweets = reversed(
+                    await Crawler.fetch_latest_tweets(
+                        OFFICIAL_BEARER_TOKEN, OFFICIAL_USER_ID
+                    )
                 )
                 await Sender.send_new_official_tweets(new_official_tweets)
-                new_environment_tweets = await Crawler.fetch_latest_tweets(
-                    ENVIRONMENT_BEARER_TOKEN, ENVIRONMENT_USER_ID
+                new_environment_tweets = reversed(
+                    await Crawler.fetch_latest_tweets(
+                        ENVIRONMENT_BEARER_TOKEN, ENVIRONMENT_USER_ID
+                    )
                 )
                 await Sender.send_new_environment_tweets(new_environment_tweets)
             new_articles = await Crawler.get_new_articles()
