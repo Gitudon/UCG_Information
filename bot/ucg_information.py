@@ -208,6 +208,7 @@ class Sender:
 
     @staticmethod
     async def send_new_environment_tweets(latest_tweets: list):
+        channel = client.get_channel(ENVIRONMENT_CHANNEL_ID)
         for tweet in latest_tweets:
             tweet_id = tweet["id"]
             tweet_url = f"https://x.com/{ENVIRONMENT_USER_ID}/status/{tweet_id}"
@@ -219,7 +220,6 @@ class Sender:
             )
             if existing:
                 continue
-            channel = client.get_channel(ENVIRONMENT_CHANNEL_ID)
             await channel.send(f"{tweet_url}")
             await Sender.register_tweet(tweet)
 
