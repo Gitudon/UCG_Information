@@ -12,8 +12,10 @@ TOKEN = os.getenv("TOKEN")
 OFFICIAL_INFO_CHANNEL_ID = int(os.environ.get("OFFICIAL_INFO_CHANNEL_ID"))
 ENVIRONMENT_CHANNEL_ID = int(os.environ.get("ENVIRONMENT_CHANNEL_ID"))
 NEW_CARD_CHANNEL_ID = int(os.environ.get("NEW_CARD_CHANNEL_ID"))
-OFFICIAL_INFO_USER_ID = os.getenv("OFFICIAL_INFO_USER_ID")
+OFFICIAL_USER_ID = os.getenv("OFFICIAL_USER_ID")
+OFFICIAL_BEARER_TOKEN = os.getenv("OFFICIAL_BEARER_TOKEN")
 ENVIRONMENT_USER_ID = os.getenv("ENVIRONMENT_USER_ID")
+ENVIRONMENT_BEARER_TOKEN = os.getenv("ENVIRONMENT_BEARER_TOKEN")
 TARGET_URL = "https://ultraman-cardgame.com/page/jp/news/news-list"
 intent = discord.Intents.default()
 intent.message_content = True
@@ -213,7 +215,7 @@ class Sender:
             # 一時間に一度くらい
             await asyncio.sleep(1000)
 
-    async def send_official_channel_info():
+    async def send_official_account_info():
         pass
         # 一日一度(12:05)
         await asyncio.sleep(1000)
@@ -253,9 +255,10 @@ async def main():
     while True:
         try:
             new_articles = await Crawler.get_new_articles()
-            print(new_articles)
             if new_articles != "ERROR":
                 await Sender.send_new_article(new_articles)
+            # await Sender.send_environment_info()
+            # await Sender.send_official_account_info()
         except Exception as e:
             print(f"Error: {e}")
             traceback.print_exc()
