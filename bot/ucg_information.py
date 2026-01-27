@@ -238,7 +238,12 @@ class Sender:
             if existing:
                 continue
             if any(
-                x in tweet_text for x in ("カードデザイン公開", "全カードリスト公開")
+                x in tweet_text
+                for x in (
+                    "カードデザイン公開",
+                    "全カードリスト公開",
+                    "パラレルカード公開",
+                )
             ):
                 channel_id = NEW_CARD_CHANNEL_ID
             else:
