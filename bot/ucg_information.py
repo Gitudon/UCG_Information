@@ -237,12 +237,15 @@ class Sender:
             )
             if existing:
                 continue
+            # カード関連の情報かどうかで送信先チャンネルを分ける
             if any(
                 x in tweet_text
                 for x in (
                     "カードデザイン公開",
                     "全カードリスト公開",
                     "パラレルカード公開",
+                    "PRカード",
+                    "BP",
                 )
             ):
                 channel_id = NEW_CARD_CHANNEL_ID
