@@ -187,23 +187,9 @@ class Sender:
         tweet_id = tweet["id"]
         tweet_url = f"https://x.com/{ENVIRONMENT_USER_ID}/status/{tweet_id}"
         is_retweet = tweet_text.startswith("RT @")
-        # 仮のpublic_metricsを使用
-        public_metrics = tweet.get(
-            "public_metrics", Crawler.make_dummy_public_metrics()
-        )
         await UseMySQL.run_sql(
             "INSERT INTO tweets (text, tweet_id, url, is_retweet) VALUES (%s, %s, %s, %s)",
             (tweet_text, tweet_id, tweet_url, is_retweet),
-        )
-        await UseMySQL.run_sql(
-            "INSERT INTO public_metrics (tweet_id, retweet_count, reply_count, like_count, quote_count) VALUES (%s, %s, %s, %s, %s)",
-            (
-                tweet_id,
-                public_metrics["retweet_count"],
-                public_metrics["reply_count"],
-                public_metrics["like_count"],
-                public_metrics["quote_count"],
-            ),
         )
 
     @staticmethod
