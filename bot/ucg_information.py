@@ -73,15 +73,6 @@ class Crawler:
             await cls.session.close()
             cls.session = None
 
-    @staticmethod
-    def make_dummy_public_metrics() -> dict:
-        return {
-            "retweet_count": -1,
-            "reply_count": -1,
-            "like_count": -1,
-            "quote_count": -1,
-        }
-
     @classmethod
     async def fetch_latest_tweets(cls, bearer_token: str, user_id: str) -> list:
         retries = 5
