@@ -92,7 +92,6 @@ class Crawler:
             "Authorization": f"Bearer {bearer_token}",
             "User-Agent": "v2UserTweetsPython",
         }
-        # params = {"max_results": GET_TWEET_NUMBER, "tweet.fields": "text,public_metrics"}
         params = {"max_results": GET_TWEET_NUMBER, "tweet.fields": "text"}
         for attempt in range(retries):
             await asyncio.sleep(1)
