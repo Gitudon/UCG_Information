@@ -221,7 +221,6 @@ class Sender:
                     "全カードリスト公開",
                     "パラレルカード公開",
                     "PRカード",
-                    "BP",
                 )
             ):
                 channel_id = NEW_CARD_CHANNEL_ID
