@@ -82,7 +82,8 @@ class UCGInformation:
             )
             if sent:
                 continue
-            print(f"Sending article: {article}")
+            if not article:
+                continue
             await channel.send(article)
             while True:
                 title = await Crawler.get_article_title(article)
